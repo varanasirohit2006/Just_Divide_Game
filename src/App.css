@@ -1,0 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Fredoka One', cursive;
+  background: #fce4ec;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 550px;
+  margin: 0 auto;
+  padding: 16px;
+  text-align: center;
+}
+
+.title { color: #7b1fa2; font-size: 2rem; }
+.timer { color: #555; font-size: 0.9rem; margin: 4px 0; }
+.subtitle { color: #f57c00; font-size: 0.7rem; letter-spacing: 1px; margin-bottom: 10px; }
+
+.badges { display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; }
+.badge {
+  padding: 6px 18px;
+  border-radius: 10px;
+  color: white;
+  font-size: 0.85rem;
+}
+.level { background: #7b1fa2; }
+.sc { background: #ff9800; }
+
+.game-area {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 60px);
+  grid-template-rows: repeat(4, 60px);
+  gap: 5px;
+  background: #26a69a;
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.cell {
+  background: rgba(178, 223, 219, 0.6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.cell.empty:hover {
+  background: rgba(178, 223, 219, 0.95);
+}
+
+.tile {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.3rem;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+.tile.small { width: 38px; height: 38px; font-size: 1rem; opacity: 0.7; }
+.tile.active-tile {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+  box-shadow: 0 0 10px rgba(255,215,0,0.6);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.keep-box {
+  width: 55px;
+  height: 55px;
+  border: 2px dashed #26a69a;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(255,255,255,0.5);
+  color: #aaa;
+  font-size: 1.4rem;
+}
+
+.label { font-size: 0.65rem; color: #777; letter-spacing: 1px; }
+
+.queue { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+.trash-btn {
+  width: 55px;
+  height: 44px;
+  border: 2px solid #e53935;
+  border-radius: 10px;
+  background: #ffcdd2;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.trash-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.restart-btn {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #26a69a;
+  color: white;
+  font-family: 'Fredoka One', cursive;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.best { margin-top: 14px; color: #7b1fa2; font-size: 0.85rem; }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 18px;
+  text-align: center;
+}
+.modal h2 { color: #7b1fa2; margin-bottom: 10px; }
+.modal p { margin: 4px 0; color: #555; }
+.modal .new-best { color: #ff9800; font-size: 1.1rem; }
+.modal button {
+  margin-top: 14px;
+  padding: 10px 28px;
+  border: none;
+  border-radius: 20px;
+  background: #26a69a;
+  color: white;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+@media (max-width: 500px) {
+  .game-area { flex-direction: column; align-items: center; }
+  .grid { grid-template-columns: repeat(4, 55px); grid-template-rows: repeat(4, 55px); }
+  .tile { width: 45px; height: 45px; font-size: 1.1rem; }
+}
