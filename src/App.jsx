@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 
 const TILE_COLORS = {
@@ -44,7 +44,12 @@ function App() {
   const [trash, setTrash] = useState(3)
   const [over, setOver] = useState(false)
   const [timer, setTimer] = useState(0)
+  const [dragOver, setDragOver] = useState(null)        // { r, c } for highlight
+  const [dragging, setDragging] = useState(null)         // 'active' | 'keep'
+  const [touchDrag, setTouchDrag] = useState(null)       // touch-based drag state
   const timerRef = useRef(null)
+  const ghostRef = useRef(null)
+  const gridRef = useRef(null)
 
   useEffect(() => {
     if (!over) {
@@ -130,11 +135,12 @@ function App() {
     return true
   }
 
-  function placeTile(r, c) {
-    if (over || grid[r][c] !== null) return
+  // Place a tile value at (r, c) — used by both click and drop
+  const placeTileAt = useCallback((r, c, value, source) => {
+    if (over || grid[r][c] !== null) return false
 
     const newGrid = grid.map(row => [...row])
-    newGrid[r][c] = activeTile
+    newGrid[r][c] = value
 
     const result = resolveMerges(newGrid)
     const newScore = score + result.points
@@ -142,9 +148,19 @@ function App() {
     setGrid(result.grid)
     setScore(newScore)
     if (newScore > best) setBest(newScore)
-    setQueue([...queue.slice(1), randomTile(level)])
+
+    if (source === 'active') {
+      setQueue([...queue.slice(1), randomTile(level)])
+    } else if (source === 'keep') {
+      setKeep(null)
+    }
 
     if (isGameOver(result.grid)) setOver(true)
+    return true
+  }, [over, grid, score, best, queue, level])
+
+  function placeTile(r, c) {
+    placeTileAt(r, c, activeTile, 'active')
   }
 
   function handleKeep() {
@@ -174,6 +190,9 @@ function App() {
     setTrash(3)
     setOver(false)
     setTimer(0)
+    setDragOver(null)
+    setDragging(null)
+    setTouchDrag(null)
   }
 
   useEffect(() => {
@@ -184,6 +203,117 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // ─── HTML5 Drag & Drop handlers ────────────────────────────
+
+  function handleDragStart(e, source, value) {
+    setDragging(source)
+    e.dataTransfer.setData('text/plain', JSON.stringify({ source, value }))
+    e.dataTransfer.effectAllowed = 'move'
+
+    // Create a custom drag image
+    const ghost = document.createElement('div')
+    ghost.className = 'drag-ghost'
+    ghost.textContent = value
+    ghost.style.background = TILE_COLORS[value] || '#607d8b'
+    document.body.appendChild(ghost)
+    ghostRef.current = ghost
+    e.dataTransfer.setDragImage(ghost, 28, 28)
+  }
+
+  function handleDragEnd() {
+    setDragging(null)
+    setDragOver(null)
+    if (ghostRef.current) {
+      document.body.removeChild(ghostRef.current)
+      ghostRef.current = null
+    }
+  }
+
+  function handleCellDragOver(e, r, c) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (grid[r][c] === null) {
+      setDragOver({ r, c })
+    }
+  }
+
+  function handleCellDragLeave() {
+    setDragOver(null)
+  }
+
+  function handleCellDrop(e, r, c) {
+    e.preventDefault()
+    setDragOver(null)
+    try {
+      const { source, value } = JSON.parse(e.dataTransfer.getData('text/plain'))
+      placeTileAt(r, c, value, source)
+    } catch { /* ignore */ }
+    handleDragEnd()
+  }
+
+  // ─── Touch-based drag handlers ─────────────────────────────
+
+  function handleTouchStart(e, source, value) {
+    const touch = e.touches[0]
+    setTouchDrag({ source, value, x: touch.clientX, y: touch.clientY, started: false })
+  }
+
+  function handleTouchMove(e, source, value) {
+    if (!touchDrag) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchDrag.x)
+    const dy = Math.abs(touch.clientY - touchDrag.y)
+
+    if (!touchDrag.started && (dx > 8 || dy > 8)) {
+      setTouchDrag({ ...touchDrag, started: true })
+    }
+
+    if (touchDrag.started || dx > 8 || dy > 8) {
+      // Show/move the ghost
+      if (!ghostRef.current) {
+        const ghost = document.createElement('div')
+        ghost.className = 'drag-ghost touch-ghost'
+        ghost.textContent = value
+        ghost.style.background = TILE_COLORS[value] || '#607d8b'
+        document.body.appendChild(ghost)
+        ghostRef.current = ghost
+      }
+      ghostRef.current.style.left = `${touch.clientX - 28}px`
+      ghostRef.current.style.top = `${touch.clientY - 28}px`
+
+      // Detect cell under finger
+      const el = document.elementFromPoint(touch.clientX, touch.clientY)
+      if (el) {
+        const cellEl = el.closest('[data-cell]')
+        if (cellEl) {
+          const cr = parseInt(cellEl.dataset.row)
+          const cc = parseInt(cellEl.dataset.col)
+          if (grid[cr][cc] === null) {
+            setDragOver({ r: cr, c: cc })
+          } else {
+            setDragOver(null)
+          }
+        } else {
+          setDragOver(null)
+        }
+      }
+    }
+  }
+
+  function handleTouchEnd() {
+    if (touchDrag && touchDrag.started && dragOver) {
+      placeTileAt(dragOver.r, dragOver.c, touchDrag.value, touchDrag.source)
+    }
+    setTouchDrag(null)
+    setDragOver(null)
+    setDragging(null)
+    if (ghostRef.current) {
+      document.body.removeChild(ghostRef.current)
+      ghostRef.current = null
+    }
+  }
+
   const mins = String(Math.floor(timer / 60)).padStart(2, '0')
   const secs = String(timer % 60).padStart(2, '0')
 
@@ -191,7 +321,7 @@ function App() {
     <div className="app">
       <h1 className="title">JUST DIVIDE</h1>
       <p className="timer">⏳ {mins}:{secs}</p>
-      <p className="subtitle">Divide the numbers to solve rows and columns</p>
+      <p className="subtitle">Drag tiles onto the grid — or click to place!</p>
 
       <div className="badges">
         <span className="badge level">LEVEL {level}</span>
@@ -199,26 +329,44 @@ function App() {
       </div>
 
       <div className="game-area">
-        <div className="grid">
+        <div className="grid" ref={gridRef}>
           {grid.map((row, r) =>
-            row.map((cell, c) => (
-              <div
-                key={`${r}-${c}`}
-                className={`cell ${cell === null ? 'empty' : ''}`}
-                onClick={() => placeTile(r, c)}
-              >
-                {cell !== null && (
-                  <div className="tile" style={{ background: TILE_COLORS[cell] || '#607d8b' }}>
-                    {cell}
-                  </div>
-                )}
-              </div>
-            ))
+            row.map((cell, c) => {
+              const isOver = dragOver && dragOver.r === r && dragOver.c === c
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  data-cell="true"
+                  data-row={r}
+                  data-col={c}
+                  className={`cell ${cell === null ? 'empty' : ''} ${isOver ? 'drag-highlight' : ''}`}
+                  onClick={() => placeTile(r, c)}
+                  onDragOver={(e) => handleCellDragOver(e, r, c)}
+                  onDragLeave={handleCellDragLeave}
+                  onDrop={(e) => handleCellDrop(e, r, c)}
+                >
+                  {cell !== null && (
+                    <div className="tile placed-tile" style={{ background: TILE_COLORS[cell] || '#607d8b' }}>
+                      {cell}
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
 
         <div className="panel">
-          <div className="keep-box" onClick={handleKeep}>
+          <div
+            className={`keep-box ${keep !== null ? 'draggable-source' : ''}`}
+            onClick={handleKeep}
+            draggable={keep !== null}
+            onDragStart={(e) => keep !== null && handleDragStart(e, 'keep', keep)}
+            onDragEnd={handleDragEnd}
+            onTouchStart={(e) => keep !== null && handleTouchStart(e, 'keep', keep)}
+            onTouchMove={(e) => keep !== null && handleTouchMove(e, 'keep', keep)}
+            onTouchEnd={handleTouchEnd}
+          >
             {keep !== null ? (
               <div className="tile small" style={{ background: TILE_COLORS[keep] || '#607d8b' }}>{keep}</div>
             ) : '—'}
@@ -227,8 +375,17 @@ function App() {
 
           <div className="queue">
             {queue.map((val, i) => (
-              <div key={i} className={`tile ${i === 0 ? 'active-tile' : 'small'}`}
-                style={{ background: TILE_COLORS[val] || '#607d8b' }}>
+              <div
+                key={i}
+                className={`tile ${i === 0 ? 'active-tile draggable-source' : 'small'}`}
+                style={{ background: TILE_COLORS[val] || '#607d8b' }}
+                draggable={i === 0}
+                onDragStart={(e) => i === 0 && handleDragStart(e, 'active', val)}
+                onDragEnd={handleDragEnd}
+                onTouchStart={(e) => i === 0 && handleTouchStart(e, 'active', val)}
+                onTouchMove={(e) => i === 0 && handleTouchMove(e, 'active', val)}
+                onTouchEnd={handleTouchEnd}
+              >
                 {val}
               </div>
             ))}

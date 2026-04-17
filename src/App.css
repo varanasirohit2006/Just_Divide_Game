@@ -54,10 +54,19 @@ body {
   justify-content: center;
   cursor: pointer;
   border: 2px solid rgba(255,255,255,0.3);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .cell.empty:hover {
   background: rgba(178, 223, 219, 0.95);
+}
+
+/* ─── Drag highlight on valid drop target ─────────────────── */
+.cell.drag-highlight {
+  background: rgba(255, 215, 0, 0.35) !important;
+  border-color: #ffd54f !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.5), inset 0 0 12px rgba(255, 215, 0, 0.25);
+  transform: scale(1.08);
 }
 
 .tile {
@@ -70,6 +79,19 @@ body {
   color: white;
   font-size: 1.3rem;
   box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Placed tile pop-in animation */
+.tile.placed-tile {
+  animation: popIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.3); opacity: 0.3; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
 }
 
 .tile.small { width: 38px; height: 38px; font-size: 1rem; opacity: 0.7; }
@@ -78,6 +100,57 @@ body {
   height: 48px;
   font-size: 1.2rem;
   box-shadow: 0 0 10px rgba(255,215,0,0.6);
+}
+
+/* ─── Draggable source indicators ─────────────────────────── */
+.draggable-source {
+  cursor: grab;
+  position: relative;
+}
+.draggable-source:active {
+  cursor: grabbing;
+}
+.tile.draggable-source {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); }
+  50% { box-shadow: 0 0 22px rgba(255,215,0,0.9), 0 0 40px rgba(255,215,0,0.3); }
+}
+
+.keep-box.draggable-source {
+  border-color: #ffd54f;
+  animation: keepPulse 1.6s ease-in-out infinite;
+}
+@keyframes keepPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(255,215,0,0.3); }
+  50% { box-shadow: 0 0 16px rgba(255,215,0,0.7); }
+}
+
+/* ─── Custom drag ghost ───────────────────────────────────── */
+.drag-ghost {
+  position: fixed;
+  top: -100px;
+  left: -100px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.3rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+.drag-ghost.touch-ghost {
+  top: 0;
+  left: 0;
+  transform: scale(1.15);
 }
 
 .panel {
@@ -99,6 +172,7 @@ body {
   background: rgba(255,255,255,0.5);
   color: #aaa;
   font-size: 1.4rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .label { font-size: 0.65rem; color: #777; letter-spacing: 1px; }
